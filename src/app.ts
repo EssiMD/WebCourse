@@ -12,7 +12,7 @@ type TUser = {
 }
 
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static('public')); // Important line!
 
 // File operations
 const DATA_FILE = 'data.json';

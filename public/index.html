@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo App</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Todo App</h1>
+        
+        <div class="add-todo">
+            <input type="text" id="nameInput" placeholder="Enter your name">
+            <input type="text" id="todoInput" placeholder="Enter your todo">
+            <button onclick="addTodo()">Add Todo</button>
+        </div>
+
+        <div class="search-todo">
+            <input type="text" id="searchInput" placeholder="Search todos by name">
+            <button onclick="searchTodos()">Search</button>
+        </div>
+
+        <div id="todoList" class="todo-list">
+            <!-- Todos will be displayed here -->
+        </div>
+    </div>
+
+    <script>
+        async function addTodo() {
+            const name = document.getElementById('nameInput').value;
+            const todo = document.getElementById('todoInput').value;
+
+            if (!name || !todo) {
+                alert('Please enter both name and todo');
+                return;
+            }
+
+            try {
+                const response = await fetch('/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, todo })
+                });
+
+                const data = await response.json();
+                alert(data.message);
+                
+                // Clear inputs
+                document.getElementById('todoInput').value = '';
+                
+                // If we were displaying this user's todos, refresh them
+                if (document.getElementById('searchInput').value.toLowerCase() === name.toLowerCase()) {
+                    searchTodos();
+                }
+            } catch (error) {
+                alert('Error adding todo');
+            }
+        }
+
+        async function searchTodos() {
+            const name = document.getElementById('searchInput').value;
+            if (!name) {
+                alert('Please enter a name to search');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/todos/${name}`);
+                const data = await response.json();
+
+                const todoList = document.getElementById('todoList');
+                todoList.innerHTML = '';
+
+                if (data.todos && data.todos.length > 0) {
+                    const todoItems = data.todos.map(todo => `
+                        <div class="todo-item">
+                            <span>${todo}</span>
+                            <button onclick="deleteTodo('${data.name}', '${todo}')">Delete</button>
+                        </div>
+                    `).join('');
+                    todoList.innerHTML = `
+                        <div class="user-todos">
+                            <h2>${data.name}'s Todos</h2>
+                            ${todoItems}
+                            <button class="delete-user" onclick="deleteUser('${data.name}')">Delete User</button>
+                        </div>
+                    `;
+                } else {
+                    todoList.innerHTML = '<p>No todos found for this user</p>';
+                }
+            } catch (error) {
+                document.getElementById('todoList').innerHTML = '<p>User not found</p>';
+            }
+        }
+
+        async function deleteTodo(name, todo) {
+            try {
+                const response = await fetch('/update', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, todo })
+                });
+
+                const data = await response.json();
+                alert(data.message);
+                searchTodos(); // Refresh the todo list
+            } catch (error) {
+                alert('Error deleting todo');
+            }
+        }
+
+        async function deleteUser(name) {
+            if (!confirm(`Are you sure you want to delete all todos for ${name}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/delete', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name })
+                });
+
+                const data = await response.json();
+                alert(data.message);
+                document.getElementById('todoList').innerHTML = '';
+            } catch (error) {
+                alert('Error deleting user');
+            }
+        }
+    </script>
+</body>
+</html>
